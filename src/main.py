@@ -1,5 +1,9 @@
 import asyncio
-from .web_scraper import scraping_with_requests, ascraping_with_playwright
+from .web_scraper import (
+    scraping_with_requests,
+    ascraping_with_playwright,
+    clean_html_content,
+)
 from .schemas import QuotesPage
 
 
