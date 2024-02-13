@@ -3,10 +3,10 @@ import openai
 import instructor
 
 from .config import settings
+from .schemas import QuotesPage
 
 from pydantic import BaseModel
 from typing import Type, Union
-from .schemas import WebsiteSchema
 
 client = instructor.patch(openai.OpenAI(api_key=settings.OPENAI_API_KEY))
 
@@ -14,16 +14,18 @@ BASE_PROMPT: str = f"""
     You will be given HTML content of a web page it will be delimited by four hashtags.
     Please extract the following information according to the specified schema, and format it as a JSON:
     {
-        str(WebsiteSchema.ConfigDict.json_schema_extra["example"])
+        str(QuotesPage.ConfigDict.json_schema_extra["example"])
     }
     """
 
 
-def extract(content: str, schema_pydantic: Union[Type[BaseModel], BaseModel]):
+def extract(
+    content: str, schema: Union[Type[BaseModel], BaseModel], prompt: str = BASE_PROMPT
+) -> str:
     messages = [
         {
             "role": "system",
-            "content": BASE_PROMPT,
+            "content": prompt,
         },
         {"role": "user", "content": f"This is the website content ####{content}####"},
     ]
@@ -31,7 +33,7 @@ def extract(content: str, schema_pydantic: Union[Type[BaseModel], BaseModel]):
     attempt = 0
     while attempt < settings.MAX_RETRIES:
         try:
-            response: schema_pydantic = client.chat.completions.create(
+            response: schema = client.chat.completions.create(
                 model=settings.MODEL_NAME,
                 messages=messages,
                 temperature=0.125,

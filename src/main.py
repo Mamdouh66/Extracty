@@ -1,22 +1,25 @@
 import asyncio
-from src import web_scraper
-from schemas import WebsiteSchema
+from .web_scraper import scraping_with_requests, ascraping_with_playwright
+from .schemas import QuotesPage
 
 
 async def main() -> None:
-    # URL = "https://www.therundown.ai/p/lucid-dreaming-with-ai"
-
-    # content = web_scraper.scraping_with_requests(URL)
-
-    # with open("content.txt", "w") as f:
-    #     f.write(content)
-
-    res = web_scraper.scraping_with_requests(
-        "https://www.scrapethissite.com/pages/simple/"
+    content_with_requests = scraping_with_requests(
+        url="http://quotes.toscrape.com/",
+        schema=QuotesPage,
+        gpt=True,
     )
 
-    with open("content.txt", "w") as f:
-        f.write(res)
+    content_with_playwright = await ascraping_with_playwright(
+        url="http://quotes.toscrape.com/",
+        schema=QuotesPage,
+    )
+
+    with open("content_with_requests.json", "w") as f:
+        f.write(content_with_requests)
+
+    with open("content_with_playwright.json", "w") as f:
+        f.write(content_with_playwright)
 
 
 if __name__ == "__main__":
