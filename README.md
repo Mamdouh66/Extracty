@@ -9,10 +9,11 @@ The main idea of the project is to make scraping websites much faster with the u
 The main file is `src/`
 
 `main.py`: This is the main entry point for the application. It orchestrates the scraping process, it has a simple script to check the logic.  
-`web_scraper.py`: This file contains the functions for scraping web pages with using two choices `requests` and `playwright`.
-`gpt_scraper.py`: This file contains helper functions for `web_scraper.py` for processing the scraped content using GPT.
-`config.py`: This file contains configuration settings for the project.
-`schemas.py`: This file defines the schemas used to extract information from the scraped content
+`web_scraper.py`: This file contains the functions for scraping web pages with using two choices `requests` and `playwright`.  
+`gpt_scraper.py`: This file contains helper functions for `web_scraper.py` for processing the scraped content using GPT.  
+`config.py`: This file contains configuration settings for the project.  
+`schemas.py`: This file defines the schemas used to extract information from the scraped content.  
+
 
 ## How to Run
 
