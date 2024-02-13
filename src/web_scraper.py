@@ -20,22 +20,38 @@ logging.basicConfig(
 def clean_html_content(
     html_content: str, tags: list[str], unwanted_tags: list[str] = ["script", "style"]
 ) -> str:
+    from bs4 import BeautifulSoup
+
+    # Remove unwanted tags
     soup = BeautifulSoup(html_content, "html.parser")
     for tag in unwanted_tags:
-        [element.decompose() for element in soup.find_all(tag)]
+        for element in soup.find_all(tag):
+            element.decompose()
+
+    # Extract text from wanted tags
     text_parts = []
     for tag in tags:
-        for element in soup.find_all(tag):
-            text = (
-                f"{element.get_text()} ({element.get('href')})"
-                if tag == "a" and element.get("href")
-                else element.get_text()
-            )
-            text_parts.append(text)
+        elements = soup.find_all(tag)
+        for element in elements:
+            if tag == "a":
+                href = element.get("href")
+                text_parts.append(
+                    f"{element.get_text()} ({href})" if href else element.get_text()
+                )
+            else:
+                text_parts.append(element.get_text())
 
-    cleaned_content = " ".join(
-        {line.strip() for line in " ".join(text_parts).split("\n") if line.strip()}
-    )
+    # Remove unnecessary lines
+    content = " ".join(text_parts)
+    lines = content.split("\n")
+    stripped_lines = [line.strip() for line in lines]
+    non_empty_lines = [line for line in stripped_lines if line]
+    seen = set()
+    deduped_lines = [
+        line for line in non_empty_lines if not (line in seen or seen.add(line))
+    ]
+    cleaned_content = " ".join(deduped_lines)
+
     return cleaned_content
 
 
@@ -77,3 +93,4 @@ def scraping_with_requests(
     except requests.RequestException as e:
         logging.error(f"Requests Error: {e}")
         raise
+    return cleaned_content
