@@ -1,3 +1,4 @@
+import asyncio
 import instructor
 
 from openai import OpenAI
@@ -31,27 +32,9 @@ class BaseExtractor(BaseModel):
         examples=["latest_stock_details", "trending_news"],
     )
     data: list[dict[str, str]] = Field(
-        description="The important data to be extracted",
+        description="The data to be extracted. It should be a list of dictionaries with key-value pairs.",
         examples=[{"Harry Potter": "Gryiffindor"}, {"Draco Malfoy": "Slytherin"}],
     )
-
-    @validator("name")
-    def validate_name(cls, v):
-        if not v.strip():
-            raise ValueError("The name must be a non-empty string.")
-        return v
-
-    @validator("data", each_item=True)
-    def validate_data(cls, v):
-        if not isinstance(v, dict):
-            raise TypeError("Each item in data must be a dictionary.")
-        if not all(
-            isinstance(key, str) and isinstance(value, str) for key, value in v.items()
-        ):
-            raise ValueError(
-                "Each dictionary in data must have string keys and values."
-            )
-        return v
 
 
 class LLMExtractor:
@@ -60,29 +43,29 @@ class LLMExtractor:
         self.url = url
         self.fields = fields
 
-    async def _get_content(self) -> str:
-            """
-            Retrieves the content of a web page using a WebScraper object.
+    async def __get_content(self) -> str:
+        """
+        Retrieves the content of a web page using a WebScraper object.
 
-            Returns:
-                str: The content of the web page.
+        Returns:
+            str: The content of the web page.
 
-            Raises:
-                TimeoutError: If the scraping process times out or the page takes too long to load.
-                Exception: If any other exception occurs during the scraping process.
-            """
-            scraper = WebScraper(self.url)
-            try:
-                content = await scraper.ascraping_with_playwright()
-                return content
-            except PlaywrightTimeoutError as pte:
-                raise TimeoutError(
-                    "The scraping process timed out. Or the page took too long to load. Please try again later."
-                )
-            except Exception as e:
-                raise e
+        Raises:
+            TimeoutError: If the scraping process times out or the page takes too long to load.
+            Exception: If any other exception occurs during the scraping process.
+        """
+        scraper = WebScraper(self.url)
+        try:
+            content = await scraper.ascraping_with_playwright()
+            return content
+        except PlaywrightTimeoutError as pte:
+            raise TimeoutError(
+                "The scraping process timed out. Or the page took too long to load. Please try again later."
+            )
+        except Exception as e:
+            raise e
 
-    def _create_pydantic_model(self, fields: Dict[str, Type]) -> Type[T]:
+    def __create_pydantic_model(self, fields: Dict[str, Type]) -> Type[T]:
         """
         Create a Pydantic model dynamically based on fields provided
 
@@ -97,5 +80,29 @@ class LLMExtractor:
             field_name: (field_type, Field(...))
             for field_name, field_type in fields.items()
         }
-        dynamic_model = create_model("CustomExtractor", **field_definitions)
+        dynamic_model = create_model(
+            "CustomExtractor", **field_definitions, __base__=BaseModel
+        )
         return dynamic_model
+
+    def __generate_prompt(self, content: str) -> list[dict]:
+        messages = [
+            {
+                "role": "system",
+                "content": "You are a helpful extractor that extract and structur data. You will be given a content to extract information from. The content is delimited by four backticks. Also, you will be given a query of what to extract delimited by four hashtags.",
+            },
+            {
+                "role": "user",
+                "content": f"please have the following Query: ####{self.query}#### and here is the following Content: ```{content}```",
+            },
+        ]
+        return messages
+
+    def __call_openai(self, prompt: list[dict], pydantic_schema: Type[T]) -> dict:
+        response = client.chat.completions.create(
+            model=settings.MODEL_NAME,
+            messages=prompt,
+            response_model=pydantic_schema,
+            temperature=0.125,
+        )
+        return response.choices[0].message.content
