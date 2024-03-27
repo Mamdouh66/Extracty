@@ -8,9 +8,10 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 from structify.config import settings
 from structify import WebScraper
 
-from typing import Type, Dict, Union, TypeVar
+from typing import Type, Dict, Union, TypeVar, Generic
 
 T = TypeVar("T", bound=BaseModel)
+DataT = TypeVar("DataT")
 
 client = instructor.patch(OpenAI(api_key=settings.OPENAI_API_KEY))
 
@@ -28,17 +29,23 @@ class BaseExtractor(BaseModel):
 
     name: str = Field(
         ...,
-        description="The name of extracted thing",
+        description="Only the general name of extracted thing",
         examples=["latest_stock_details", "trending_news"],
     )
-    data: list[dict[str, str]] = Field(
-        description="The data to be extracted. It should be a list of dictionaries with key-value pairs.",
-        examples=[{"Harry Potter": "Gryiffindor"}, {"Draco Malfoy": "Slytherin"}],
-    )
+    data: DataT
 
 
 class LLMExtractor:
     def __init__(self, query: str, url: str, fields: list[str] | None = None):
+        """
+        Initializes an instance of the LLMExtractor class.
+
+        Args:
+            query (str): The query string used for extraction.
+            url (str): The URL of the webpage to extract data from.
+            fields (list[str] | None): A list of field names to extract. Defaults to None.
+
+        """
         self.query = query
         self.url = url
         self.fields = fields
@@ -76,12 +83,19 @@ class LLMExtractor:
             BaseModel: The dynamically created Pydantic model.
 
         """
-        field_definitions = {
-            field_name: (field_type, Field(...))
-            for field_name, field_type in fields.items()
-        }
+        data_model = create_model(
+            "DataModel",
+            **{
+                field_name: (field_type, Field(...))
+                for field_name, field_type in fields.items()
+            },
+        )
+
         dynamic_model = create_model(
-            "CustomExtractor", **field_definitions, __base__=BaseModel
+            "CustomExtractor",
+            index=(int, Field(..., description="Index of the item")),
+            name=(str, Field(..., description="Name of the item")),
+            data=(list[data_model], Field(..., description="The dynamic data fields")),
         )
         return dynamic_model
 
@@ -89,11 +103,11 @@ class LLMExtractor:
         messages = [
             {
                 "role": "system",
-                "content": "You are a helpful extractor that extract and structur data. You will be given a content to extract information from. The content is delimited by four backticks. Also, you will be given a query of what to extract delimited by four hashtags.",
+                "content": "You are a helpful extractor that extract and structur data.",
             },
             {
                 "role": "user",
-                "content": f"please have the following Query: ####{self.query}#### and here is the following Content: ```{content}```",
+                "content": f"You will be given a content to extract information from. The content is delimited by four backticks. Also, you will be given a query of what to extract delimited by four hashtags. please have the following Query: ####{self.query}#### and here is the following Content: ```{content}```",
             },
         ]
         return messages
