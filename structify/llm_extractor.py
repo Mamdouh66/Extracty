@@ -2,8 +2,14 @@ import instructor
 
 from openai import OpenAI
 from pydantic import BaseModel, Field, create_model, validator
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from structify.config import settings
+from structify import WebScraper
+
+from typing import Type, Dict, Union, TypeVar
+
+T = TypeVar("T", bound=BaseModel)
 
 client = instructor.patch(OpenAI(api_key=settings.OPENAI_API_KEY))
 
@@ -49,4 +55,47 @@ class BaseExtractor(BaseModel):
 
 
 class LLMExtractor:
-    def __init__(self): ...
+    def __init__(self, query: str, url: str, fields: list[str] | None = None):
+        self.query = query
+        self.url = url
+        self.fields = fields
+
+    async def _get_content(self) -> str:
+            """
+            Retrieves the content of a web page using a WebScraper object.
+
+            Returns:
+                str: The content of the web page.
+
+            Raises:
+                TimeoutError: If the scraping process times out or the page takes too long to load.
+                Exception: If any other exception occurs during the scraping process.
+            """
+            scraper = WebScraper(self.url)
+            try:
+                content = await scraper.ascraping_with_playwright()
+                return content
+            except PlaywrightTimeoutError as pte:
+                raise TimeoutError(
+                    "The scraping process timed out. Or the page took too long to load. Please try again later."
+                )
+            except Exception as e:
+                raise e
+
+    def _create_pydantic_model(self, fields: Dict[str, Type]) -> Type[T]:
+        """
+        Create a Pydantic model dynamically based on fields provided
+
+        Args:
+            fields (Dict[str, Type]): A dictionary containing the field names and their corresponding types.
+
+        Returns:
+            BaseModel: The dynamically created Pydantic model.
+
+        """
+        field_definitions = {
+            field_name: (field_type, Field(...))
+            for field_name, field_type in fields.items()
+        }
+        dynamic_model = create_model("CustomExtractor", **field_definitions)
+        return dynamic_model
