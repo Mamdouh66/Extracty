@@ -2,18 +2,15 @@ import asyncio
 import instructor
 
 from openai import OpenAI
-from pydantic import BaseModel, Field, create_model, validator
+from pydantic import BaseModel, Field, create_model
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from structify.config import settings
 from structify import WebScraper
 
-from typing import Type, Dict, Union, TypeVar, Generic
+from typing import Type, TypeVar
 
 T = TypeVar("T", bound=BaseModel)
 DataT = TypeVar("DataT")
-
-client = instructor.patch(OpenAI(api_key=settings.OPENAI_API_KEY))
 
 
 class BaseExtractor(BaseModel):
@@ -32,25 +29,42 @@ class BaseExtractor(BaseModel):
         description="Only the general name of extracted thing",
         examples=["latest_stock_details", "trending_news"],
     )
-    data: DataT
+    data: DataT = Field(
+        ...,
+        description="The important data to be extracted, if the data is huge then it should be a list of dictionaries",
+        examples=[
+            {"name": "stock_name", "value": "Apple Inc."},
+            {"name": "stock_price", "value": "$150.00"},
+        ],
+    )
 
 
 class LLMExtractor:
-    def __init__(self, query: str, url: str, fields: list[str] | None = None):
+    def __init__(
+        self,
+        query: str,
+        url: str,
+        api_key: str,
+        gpt_model: str = "gpt-4",
+        fields: list[str] | None = None,
+    ):
         """
         Initializes an instance of the LLMExtractor class.
 
         Args:
             query (str): The query string used for extraction.
             url (str): The URL of the webpage to extract data from.
+            api_key (str): The OpenAI api key for accessing the extraction service.
             fields (list[str] | None): A list of field names to extract. Defaults to None.
 
         """
         self.query = query
         self.url = url
+        self.api_key = api_key
+        self.gpt_model = gpt_model
         self.fields = fields
 
-    async def __get_content(self) -> str:
+    def __get_content(self) -> str:
         """
         Retrieves the content of a web page using a WebScraper object.
 
@@ -63,7 +77,8 @@ class LLMExtractor:
         """
         scraper = WebScraper(self.url)
         try:
-            content = await scraper.ascraping_with_playwright()
+            # content = await scraper.ascraping_with_playwright()
+            content = scraper.scraping_with_langchain()
             return content
         except PlaywrightTimeoutError as pte:
             raise TimeoutError(
@@ -72,15 +87,15 @@ class LLMExtractor:
         except Exception as e:
             raise e
 
-    def __create_pydantic_model(self, fields: Dict[str, Type]) -> Type[T]:
+    def __create_pydantic_model(self, fields: dict[str, Type]) -> Type[T]:
         """
-        Create a Pydantic model dynamically based on fields provided
+        Create a Pydantic model dynamically based on fields provided.
 
         Args:
             fields (Dict[str, Type]): A dictionary containing the field names and their corresponding types.
 
         Returns:
-            BaseModel: The dynamically created Pydantic model.
+            Type[T]: The dynamically created Pydantic model.
 
         """
         data_model = create_model(
@@ -112,9 +127,12 @@ class LLMExtractor:
         ]
         return messages
 
-    def __call_openai(self, prompt: list[dict], pydantic_schema: Type[T]) -> dict:
+    def __call_openai(
+        self, prompt: list[dict], pydantic_schema: Type[T], api_key: str, gpt_model: str
+    ) -> dict:
+        client = instructor.patch(OpenAI(api_key=api_key))
         response = client.chat.completions.create(
-            model=settings.MODEL_NAME,
+            model=gpt_model,
             messages=prompt,
             response_model=pydantic_schema,
             temperature=0.125,
@@ -145,7 +163,8 @@ class LLMExtractor:
             TimeoutError: If the scraping process times out or the page takes too long to load.
             Exception: If any other exception occurs during the scraping process.
         """
-        content = self.__async_run_content()
+        # content = self.__async_run_content()
+        content = self.__get_content()
 
         pydantic_schema = (
             self.__create_pydantic_model(fields=self.fields)
@@ -155,7 +174,12 @@ class LLMExtractor:
 
         prompt = self.__generate_prompt(content)
 
-        response = self.__call_openai(prompt=prompt, pydantic_schema=pydantic_schema)
+        response = self.__call_openai(
+            prompt=prompt,
+            pydantic_schema=pydantic_schema,
+            api_key=self.api_key,
+            gpt_model=self.gpt_model,
+        )
 
         # TODO: implement more logic to handle response and create a structured output
 

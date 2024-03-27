@@ -1,5 +1,6 @@
 import logging
 
+from langchain_community.document_loaders import AsyncHtmlLoader
 from bs4 import BeautifulSoup
 from playwright.async_api import (
     async_playwright,
@@ -18,7 +19,7 @@ class WebScraper:
     def __init__(self, url: HttpUrl):
         self.url = url
 
-    def _clean_html_content(
+    def __clean_html_content(
         self,
         html_content: str,
         wanted_tags: list[str],
@@ -67,6 +68,32 @@ class WebScraper:
 
         return cleaned_content
 
+    def scraping_with_langchain(
+        self, wanted_tags: list[str] = ["h1", "h2", "h3", "span", "p"]
+    ):
+        """
+        Scrapes the content of a web page using Requests.
+
+        Args:
+            wanted_tags (list[str], optional): List of HTML tags to extract from the page. Defaults to ["h1", "h2", "h3", "span", "p"].
+
+        Returns:
+            str: The cleaned HTML content of the page.
+
+        Raises:
+            Exception: If any error occurs during the scraping process.
+        """
+        try:
+            loader = AsyncHtmlLoader([self.url])
+            docs = loader.load()
+            cleaned_content = self.__clean_html_content(
+                docs[0].page_content, wanted_tags
+            )
+            return cleaned_content
+        except Exception as e:
+            logging.error(f"Scraping Error: {e}")
+            raise
+
     async def ascraping_with_playwright(
         self,
         wanted_tags: list[str] = ["h1", "h2", "h3", "span", "p"],
@@ -91,7 +118,7 @@ class WebScraper:
                 page.set_default_navigation_timeout(60000)
                 await page.goto(self.url)
                 page_source = await page.content()
-                cleaned_content = self._clean_html_content(page_source, wanted_tags)
+                cleaned_content = self.__clean_html_content(page_source, wanted_tags)
                 return cleaned_content
         except PlaywrightTimeoutError as e:
             logging.error(f"Playwright Timeout Error: {e}")
