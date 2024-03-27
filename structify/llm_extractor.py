@@ -108,7 +108,6 @@ class LLMExtractor:
 
         dynamic_model = create_model(
             "CustomExtractor",
-            index=(int, Field(..., description="Index of the item")),
             name=(str, Field(..., description="Name of the item")),
             data=(list[data_model], Field(..., description="The dynamic data fields")),
         )
