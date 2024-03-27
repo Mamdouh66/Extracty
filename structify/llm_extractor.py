@@ -119,4 +119,30 @@ class LLMExtractor:
         content = loop.run_until_complete(self.__get_content())
         loop.close()
         return content
-    
+
+    def extract(self) -> str:
+        """
+        Extracts data from a web page using the OpenAI API.
+
+        Returns:
+            dict: The extracted data.
+
+        Raises:
+            TimeoutError: If the scraping process times out or the page takes too long to load.
+            Exception: If any other exception occurs during the scraping process.
+        """
+        content = self.__async_run_content()
+
+        pydantic_schema = (
+            self.__create_pydantic_model(fields=self.fields)
+            if self.fields
+            else BaseExtractor
+        )
+
+        prompt = self.__generate_prompt(content)
+
+        response = self.__call_openai(prompt=prompt, pydantic_schema=pydantic_schema)
+
+        # TODO: implement more logic to handle response and create a structured output
+
+        return response
