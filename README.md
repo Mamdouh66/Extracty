@@ -1,21 +1,21 @@
-# Structify: Dynamic Data Extraction
+# Extracty: Dynamic Data Extraction
 
 Extract structured data from any unstructered web page
 
-Structify is a library designed to streamline and simplify the process of extracting structured data from websites. Utilizing the robust functionality of Pydantic and Instructor, Structify enables users to define dynamic data extraction schemas and interact with a simple function call.
+extracty is a library designed to streamline and simplify the process of extracting structured data from websites. Utilizing the robust functionality of Pydantic and Instructor, extracty enables users to define dynamic data extraction schemas and interact with a simple function call.
 
 ## How to Run
 
 first install the library.
 
 ```bash
-pip install structify
+pip install extracty
 ```
 
 How to use the library
 
 ```python
-from structify import LLMExtractor
+from extracty import LLMExtractor
 
 extractor = LLMExtractor(
     url="url-you-want-to-scrape",
@@ -34,7 +34,7 @@ here you can specify the `fields` you want the model to look for.
 Also, you can specify the types you want for each model for easier data handling.
 
 ```python
-from structify import LLMExtractor
+from extracty import LLMExtractor
 
 fields = {
     "feild_1": str,
@@ -60,7 +60,7 @@ print(data.model_dump_json())
 Here is an example usage where we want to get the top 5 trending github repo's
 
 ```python
-from structify import LLMExtractor
+from extracty import LLMExtractor
 
 fields = {
     "rank": int,

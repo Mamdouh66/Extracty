@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "structify"
-version = "0.1.3"
+name = "extracty"
+version = "0.1.0"
 description = "extract structured data from any unstructered web page"
 license = "MIT License"
 authors = ["Mamdouh66"]

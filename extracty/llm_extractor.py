@@ -5,7 +5,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field, create_model
 from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
-from structify import WebScraper
+from extracty import WebScraper
 
 from typing import Type, TypeVar
 
