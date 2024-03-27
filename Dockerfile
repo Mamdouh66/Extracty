@@ -16,4 +16,4 @@ COPY structify ./structify
 
 RUN poetry install --no-root
 
-CMD ["python", "-m", "structify.main.py"]g
+CMD ["python", "-m", "structify.main.py"]
