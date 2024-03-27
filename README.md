@@ -1,45 +1,120 @@
-# ScraperGPT
+# Structify: Dynamic Data Extraction
 
-A fun, useful project I made a while ago when making a bigger project and thought of sharing it.
+Extract structured data from any unstructered web page
 
-The main idea of the project is to make scraping websites much faster with the use of LLMs to extract the needed information in `JSON` format with just defining a `pydantic` schema. So, you don't need to manually define a parsing way for each website and a lot of boring stuff...
-
-## Project Structure
-
-The main file is `src/`
-
-`main.py`: This is the main entry point for the application. It orchestrates the scraping process, it has a simple script to check the logic.  
-`web_scraper.py`: This file contains the functions for scraping web pages with using two choices `requests` and `playwright`.  
-`gpt_scraper.py`: This file contains helper functions for `web_scraper.py` for processing the scraped content using GPT.  
-`config.py`: This file contains configuration settings for the project.  
-`schemas.py`: This file defines the schemas used to extract information from the scraped content.  
-
+Structify is a library designed to streamline and simplify the process of extracting structured data from websites. Utilizing the robust functionality of Pydantic and Instructor, Structify enables users to define dynamic data extraction schemas and interact with a simple function call.
 
 ## How to Run
 
-first install the requirements.
+first install the library.
 
 ```bash
-pip install requirements.txt
+pip install structify
 ```
 
-then to run the main file from the src, run it relatively (ik its not best practice).
+How to use the library
 
-```bash
-python -m src.main
+```python
+from structify import LLMExtractor
+
+extractor = LLMExtractor(
+    url="url-you-want-to-scrape",
+    query="your-query",
+    api_key="your-openai-api-key",
+)
+
+data = extractor.extract()
+
+print(data.model_dump_json())
 ```
 
-## How to Run Tests
+more advance extraction
 
-to run all the tests do the following.
+here you can specify the `fields` you want the model to look for.  
+Also, you can specify the types you want for each model for easier data handling.
 
-```bash
-pytest tests/
+```python
+from structify import LLMExtractor
+
+fields = {
+    "feild_1": str,
+    "feild_2": int,
+    "field_3": bool,
+}
+
+extractor = LLMExtractor(
+    url="url-you-want-to-scrape",
+    query="your-query",
+    api_key="your-openai-api-key",
+    fields=fields,
+    gpt_model="the-model-you-want-to-use (defaults to gpt-4)",
+)
+
+data = extractor.extract()
+
+print(data.model_dump_json())
 ```
 
-## Note
+## Example-usage
 
-Before running the project, make sure to set your OpenAI API key in the .env file
+Here is an example usage where we want to get the top 5 trending github repo's
+
+```python
+from structify import LLMExtractor
+
+fields = {
+    "rank": int,
+    "repo_name": str,
+    "small_description": str,
+}
+
+extractor = LLMExtractor(
+    url="https://www.github.com/trending",
+    query="What are the top 5 trending repositories on GitHub?",
+    api_key="your-openai-api-key",
+    fields=fields,
+    gpt_model="the-model-you-want-to-use (defaults to gpt-4)",
+)
+
+data = extractor.extract()
+
+print(data.model_dump_json())
+```
+
+and the corresponding output
+
+```json
+{
+  "name": "Top 5 Trending Repositories on GitHub",
+  "data": [
+    {
+      "rank": 1,
+      "repo_name": "stitionai / devika",
+      "small_description": "Devika is an Agentic AI Software Engineer that can understand high-level human instructions, break them down into steps, research relevant information, and write code to achieve the given objective. Devika aims to be a competitive open-source alternative to Devin by Cognition AI."
+    },
+    {
+      "rank": 2,
+      "repo_name": "OpenDevin / OpenDevin",
+      "small_description": "OpenDevin: Code Less, Make More 利用大模型，一键生成短视频"
+    },
+    {
+      "rank": 3,
+      "repo_name": "harry0703 / MoneyPrinterTurbo",
+      "small_description": "Decentralized Autonomous Regulated Company (DARC), a company virtual machine that runs on any EVM-compatible blockchain, with on-chain law system, multi-level tokens and dividends mechanism."
+    },
+    {
+      "rank": 4,
+      "repo_name": "Project-DARC / DARC",
+      "small_description": "A natural language interface for computers"
+    },
+    {
+      "rank": 5,
+      "repo_name": "OpenInterpreter / open-interpreter",
+      "small_description": "A one stop repository for generative AI research updates, interview resources, notebooks and much more!"
+    }
+  ]
+}
+```
 
 ## Contributing
 
@@ -52,3 +127,19 @@ If you would like to contribute to this project, please follow these steps:
 5. Submit a pull request to the original repository.
 
 I appreciate your contributions to build this fun project!
+
+## TODOs
+
+- [ ] Enhance the scraping and make it more robust.
+  - [ ] Utilize async Playwright to be efficient for installation.
+  - [ ] Enhance cleaning HTML content and make it more efficient.
+- [ ] Enhance Pydantic modeling.
+  - [ ] Enhance dynamic model creation.
+  - [ ] Enhance BaseExtractor.
+- [ ] Optimize performance for large-scale data extraction.
+
+## Acknowledgments
+
+Utilizes OpenAI for advanced data extraction capabilities.
+Leverages Pydantic and Instructor for dynamic and robust data modeling.
+Employs langchain, playwright for efficient web interaction.
