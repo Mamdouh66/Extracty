@@ -105,7 +105,7 @@ class LLMExtractor:
             response_model=pydantic_schema,
             temperature=0.125,
         )
-        return response.choices[0].message.content
+        return response
 
     def __async_run_content(self) -> str:
         """
