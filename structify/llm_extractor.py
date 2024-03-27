@@ -106,3 +106,17 @@ class LLMExtractor:
             temperature=0.125,
         )
         return response.choices[0].message.content
+
+    def __async_run_content(self) -> str:
+        """
+        Runs the __get_content method asynchronously and returns the content.
+
+        Returns:
+            str: The content obtained from the __get_content method.
+        """
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        content = loop.run_until_complete(self.__get_content())
+        loop.close()
+        return content
+    
