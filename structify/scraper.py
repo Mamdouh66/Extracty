@@ -5,10 +5,9 @@ from playwright.async_api import (
     async_playwright,
     TimeoutError as PlaywrightTimeoutError,
 )
-from pydantic import BaseModel
-from typing import Type, Union
 
-from structify.config import settings
+from pydantic import HttpUrl
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -16,7 +15,7 @@ logging.basicConfig(
 
 
 class WebScraper:
-    def __init__(self, url: str):
+    def __init__(self, url: HttpUrl):
         self.url = url
 
     def _clean_html_content(
@@ -31,7 +30,7 @@ class WebScraper:
 
         Args:
             html_content (str): The HTML content to be cleaned.
-            wanted_tags (list[str]): The list of tags from which to extract text.
+            wanted_tags: The list of tags from which to extract text.
             unwanted_tags (list[str], optional): The list of unwanted tags to be removed.
                 Defaults to ["script", "style"].
 
@@ -82,7 +81,7 @@ class WebScraper:
             str: The cleaned HTML content of the page.
 
         Raises:
-            PlaywrightTimeoutError: If a timeout occurs during the scraping process.
+            TimeoutError: If a timeout occurs during the scraping process.
             Exception: If any other error occurs during the scraping process.
         """
         try:
