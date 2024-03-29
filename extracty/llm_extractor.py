@@ -46,7 +46,7 @@ class LLMExtractor:
         url: str,
         api_key: str,
         gpt_model: str = "gpt-4",
-        fields: list[str] | None = None,
+        fields: dict[str, Type] | None = None,
     ):
         """
         Initializes an instance of the LLMExtractor class.
@@ -55,7 +55,8 @@ class LLMExtractor:
             query (str): The query string used for extraction.
             url (str): The URL of the webpage to extract data from.
             api_key (str): The OpenAI api key for accessing the extraction service.
-            fields (list[str] | None): A list of field names to extract. Defaults to None.
+            gpt_model (str): The GPT model to use for extraction, defaults to "gpt-4".
+            fields: dict[str, Type] | None: A dictionary containing the field names and their corresponding types, defaults to None.
 
         """
         self.query = query

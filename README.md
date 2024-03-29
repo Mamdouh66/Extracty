@@ -1,5 +1,7 @@
 # Extracty: Dynamic Data Extraction
 
+[![Downloads](https://static.pepy.tech/badge/extracty)](https://pepy.tech/project/extracty)
+
 Extract structured data from any unstructered web page
 
 extracty is a library designed to streamline and simplify the process of extracting structured data from websites. Utilizing the robust functionality of Pydantic and Instructor, extracty enables users to define dynamic data extraction schemas and interact with a simple function call.
