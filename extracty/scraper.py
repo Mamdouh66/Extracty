@@ -7,8 +7,9 @@ from playwright.async_api import (
     TimeoutError as PlaywrightTimeoutError,
 )
 
-from pydantic import HttpUrl
+from pydantic import HttpUrl, TypeAdapter
 
+http_url_adapter = TypeAdapter(HttpUrl)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -17,7 +18,12 @@ logging.basicConfig(
 
 class WebScraper:
     def __init__(self, url: HttpUrl):
-        self.url = url
+        try:
+            self.url = str(http_url_adapter.validate_python(url))
+        except:
+            logging.error(f"the provided url is not in Http Url Formt;")
+            raise
+
 
     def __clean_html_content(
         self,
