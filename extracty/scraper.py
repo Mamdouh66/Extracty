@@ -17,11 +17,12 @@ logging.basicConfig(
 
 
 class WebScraper:
-    def __init__(self, url: HttpUrl):
+    def __init__(self, url: str):
         try:
             self.url = str(http_url_adapter.validate_python(url))
-        except:
+        except Exception as e:
             logging.error(f"the provided url is not in Http Url Formt;")
+            logging.error(e)
             raise
 
 

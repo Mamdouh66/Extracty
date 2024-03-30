@@ -7,13 +7,12 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from extracty import WebScraper
 
-from typing import Type, TypeVar
+from typing import Type, TypeVar, Generic, Any
 
 T = TypeVar("T", bound=BaseModel)
-DataT = TypeVar("DataT")
 
 
-class BaseExtractor(BaseModel):
+class BaseExtractor(BaseModel, Generic[T]):
     """
     Base schema for extractors.
 
@@ -29,7 +28,7 @@ class BaseExtractor(BaseModel):
         description="Only the general name of extracted thing",
         examples=["latest_stock_details", "trending_news"],
     )
-    data: DataT = Field(
+    data: list[T] = Field(
         ...,
         description="The important data to be extracted, if the data is huge then it should be a list of dictionaries",
         examples=[
@@ -39,14 +38,14 @@ class BaseExtractor(BaseModel):
     )
 
 
-class LLMExtractor:
+class LLMExtractor(Generic[T]):
     def __init__(
         self,
         query: str,
         url: str,
         api_key: str,
         gpt_model: str = "gpt-4",
-        fields: list[str] | None = None,
+        fields: Type[T] | dict[str, Type] | None = None,
     ):
         """
         Initializes an instance of the LLMExtractor class.
@@ -87,7 +86,7 @@ class LLMExtractor:
         except Exception as e:
             raise e
 
-    def __create_pydantic_model(self, fields: dict[str, Type]) -> Type[T]:
+    def __create_pydantic_model(self, fields: Type[T]|dict[str, Type]|None) -> Type[BaseExtractor[T]]:
         """
         Create a Pydantic model dynamically based on fields provided.
 
@@ -98,22 +97,34 @@ class LLMExtractor:
             Type[T]: The dynamically created Pydantic model.
 
         """
-        data_model = create_model(
-            "DataModel",
-            **{
-                field_name: (field_type, Field(...))
-                for field_name, field_type in fields.items()
-            },
-        )
+        if fields is None:
+            data_model = create_model(
+                "DataModel",
+                **{"content":(str, Field(...))}
+            )
+
+        elif isinstance(fields, dict):
+            data_model = create_model(
+                "DataModel",
+                **{
+                    field_name: (field_type, Field(...))
+                    for field_name, field_type in fields.items()
+                },
+            )
+
+        else:
+            data_model:Type[T] = fields
+
+
 
         dynamic_model = create_model(
             "CustomExtractor",
-            name=(str, Field(..., description="Name of the item")),
+            __base__=BaseExtractor,
             data=(list[data_model], Field(..., description="The dynamic data fields")),
         )
         return dynamic_model
 
-    def __generate_prompt(self, content: str) -> list[dict]:
+    def __generate_prompt(self, content: str) -> list[dict[str, str]]:
         messages = [
             {
                 "role": "system",
@@ -127,12 +138,16 @@ class LLMExtractor:
         return messages
 
     def __call_openai(
-        self, prompt: list[dict], pydantic_schema: Type[T], api_key: str, gpt_model: str
-    ) -> dict:
+        self,
+        prompt: list[dict[str, str]],
+        pydantic_schema: Type[BaseExtractor[T]],
+        api_key: str,
+        gpt_model: str
+    ) -> BaseExtractor[T]:
         client = instructor.patch(OpenAI(api_key=api_key))
         response = client.chat.completions.create(
-            model=gpt_model,
             messages=prompt,
+            model=gpt_model,
             response_model=pydantic_schema,
             temperature=0.125,
         )
@@ -145,13 +160,14 @@ class LLMExtractor:
         Returns:
             str: The content obtained from the __get_content method.
         """
+        # FIXME: __get_content is npt async .. so there is no value in running it in  loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         content = loop.run_until_complete(self.__get_content())
         loop.close()
         return content
 
-    def extract(self) -> str:
+    def extract(self) -> BaseExtractor[T]:
         """
         Extracts data from a web page using the OpenAI API.
 
@@ -165,11 +181,7 @@ class LLMExtractor:
         # content = self.__async_run_content()
         content = self.__get_content()
 
-        pydantic_schema = (
-            self.__create_pydantic_model(fields=self.fields)
-            if self.fields
-            else BaseExtractor
-        )
+        pydantic_schema:Type[BaseExtractor[T]] = self.__create_pydantic_model(fields=self.fields)
 
         prompt = self.__generate_prompt(content)
 
